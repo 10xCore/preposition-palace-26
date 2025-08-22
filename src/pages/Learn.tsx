@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Volume2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Volume2, ChevronLeft, ChevronRight, FileText, MapPin } from "lucide-react";
 
 // Import generated images - Original 6
 import catOnChair from "@/assets/cat-on-chair.jpg";
@@ -226,11 +227,41 @@ const prepositions: PrepositionCard[] = [
 
 const categories = ["All", "Position", "Relationship", "Movement", "Location"];
 
+// Articles data
+const articles = [
+  {
+    word: "A",
+    rule: "Use 'A' before words that start with consonant sounds",
+    examples: ["a cat", "a dog", "a house", "a book", "a university"],
+    color: "bg-gradient-primary"
+  },
+  {
+    word: "AN", 
+    rule: "Use 'AN' before words that start with vowel sounds",
+    examples: ["an apple", "an elephant", "an umbrella", "an hour", "an honest person"],
+    color: "bg-gradient-secondary"
+  },
+  {
+    word: "THE",
+    rule: "Use 'THE' for specific things that both speaker and listener know about", 
+    examples: ["the sun", "the moon", "the book on the table", "the cat we saw yesterday"],
+    color: "bg-gradient-accent"
+  }
+];
+
 const Learn = () => {
+  const [searchParams] = useSearchParams();
+  const subject = searchParams.get('subject') || 'prepositions';
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 6;
+
+  // Reset page when subject changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedCategory("All");
+  }, [subject]);
 
   const filteredPrepositions = selectedCategory === "All" 
     ? prepositions 
@@ -251,9 +282,18 @@ const Learn = () => {
     }
   };
 
+  const speakText = (text: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.8;
+      utterance.pitch = 1.1;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    setCurrentPage(1); // Reset to first page when category changes
+    setCurrentPage(1);
   };
 
   const goToNextPage = () => {
@@ -271,153 +311,277 @@ const Learn = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-comic-neue font-bold text-primary mb-4">
-            Learn All Prepositions!
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
-            Master {prepositions.length} essential prepositions with fun illustrations, examples, and audio pronunciation.
-          </p>
-          
-          {/* Statistics */}
-          <div className="flex justify-center space-x-6 text-sm text-muted-foreground mb-6">
-            <span>{filteredPrepositions.length} prepositions</span>
-            <span>•</span>
-            <span>Page {currentPage} of {totalPages}</span>
-            <span>•</span>
-            <span>Category: {selectedCategory}</span>
+        {/* Subject Navigation */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center gap-4 mb-6">
+            <Button
+              onClick={() => window.location.href = '/learn?subject=prepositions'}
+              variant={subject === 'prepositions' ? 'default' : 'outline'}
+              className="flex items-center gap-2"
+            >
+              <MapPin className="w-4 h-4" />
+              Prepositions
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/learn?subject=articles'}
+              variant={subject === 'articles' ? 'default' : 'outline'}
+              className="flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Articles
+            </Button>
           </div>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              onClick={() => handleCategoryChange(category)}
-              variant={selectedCategory === category ? "default" : "outline"}
-              className={selectedCategory === category ? "btn-learn" : ""}
-            >
-              {category}
-            </Button>
-          ))}
-        </div>
-
-        {/* Preposition Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto mb-8">
-          {currentPrepositions.map((item, index) => (
-            <div key={`${item.preposition}-${startIndex + index}`} className="preposition-card group">
-              {/* Category Badge */}
-              <div className="flex justify-between items-start mb-4">
-                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-semibold">
-                  {item.category}
-                </span>
-              </div>
-
-              {/* Preposition Title */}
-              <div className="text-center mb-4">
-                <h3 className="text-3xl font-comic-neue font-bold text-primary mb-2">
-                  {item.preposition}
-                </h3>
-              </div>
-
-              {/* Illustration */}
-              <div className="rounded-xl h-48 mb-4 overflow-hidden bg-gradient-to-br from-blue-100 to-green-100">
-                <img 
-                  src={item.imageSrc} 
-                  alt={item.imageAlt}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Sentence */}
-              <div className="bg-white/80 rounded-lg p-4 mb-4">
-                <p className="text-lg font-fredoka text-center text-foreground">
-                  {item.sentence}
-                </p>
-              </div>
-
-              {/* Audio Button */}
-              <div className="text-center">
-                <Button
-                  onClick={() => speakSentence(item.sentence, startIndex + index)}
-                  variant="secondary"
-                  className="btn-learn"
-                  disabled={playingIndex === startIndex + index}
-                >
-                  <Volume2 className={`w-5 h-5 mr-2 ${playingIndex === startIndex + index ? 'animate-bounce' : ''}`} />
-                  {playingIndex === startIndex + index ? 'Playing...' : 'Play Audio'}
-                </Button>
+        {/* Render Prepositions Content */}
+        {subject === 'prepositions' && (
+          <>
+            {/* Header */}
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-comic-neue font-bold text-primary mb-4">
+                Learn All Prepositions!
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
+                Master {prepositions.length} essential prepositions with fun illustrations, examples, and audio pronunciation.
+              </p>
+              
+              {/* Statistics */}
+              <div className="flex justify-center space-x-6 text-sm text-muted-foreground mb-6">
+                <span>{filteredPrepositions.length} prepositions</span>
+                <span>•</span>
+                <span>Page {currentPage} of {totalPages}</span>
+                <span>•</span>
+                <span>Category: {selectedCategory}</span>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center space-x-4 mb-8">
-            <Button
-              onClick={goToPrevPage}
-              disabled={currentPage === 1}
-              variant="outline"
-              className="flex items-center"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-
-            <div className="flex space-x-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {/* Category Filter */}
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              {categories.map((category) => (
                 <Button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  variant={currentPage === page ? "default" : "outline"}
-                  className={`w-10 h-10 ${currentPage === page ? 'btn-learn' : ''}`}
+                  key={category}
+                  onClick={() => handleCategoryChange(category)}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  className={selectedCategory === category ? "btn-learn" : ""}
                 >
-                  {page}
+                  {category}
                 </Button>
               ))}
             </div>
 
-            <Button
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages}
-              variant="outline"
-              className="flex items-center"
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
+            {/* Preposition Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto mb-8">
+              {currentPrepositions.map((item, index) => (
+                <div key={`${item.preposition}-${startIndex + index}`} className="preposition-card group">
+                  {/* Category Badge */}
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-semibold">
+                      {item.category}
+                    </span>
+                  </div>
+
+                  {/* Preposition Title */}
+                  <div className="text-center mb-4">
+                    <h3 className="text-3xl font-comic-neue font-bold text-primary mb-2">
+                      {item.preposition}
+                    </h3>
+                  </div>
+
+                  {/* Illustration */}
+                  <div className="rounded-xl h-48 mb-4 overflow-hidden bg-gradient-to-br from-blue-100 to-green-100">
+                    <img 
+                      src={item.imageSrc} 
+                      alt={item.imageAlt}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Sentence */}
+                  <div className="bg-white/80 rounded-lg p-4 mb-4">
+                    <p className="text-lg font-fredoka text-center text-foreground">
+                      {item.sentence}
+                    </p>
+                  </div>
+
+                  {/* Audio Button */}
+                  <div className="text-center">
+                    <Button
+                      onClick={() => speakSentence(item.sentence, startIndex + index)}
+                      variant="secondary"
+                      className="btn-learn"
+                      disabled={playingIndex === startIndex + index}
+                    >
+                      <Volume2 className={`w-5 h-5 mr-2 ${playingIndex === startIndex + index ? 'animate-bounce' : ''}`} />
+                      {playingIndex === startIndex + index ? 'Playing...' : 'Play Audio'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-4 mb-8">
+                <Button
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                  variant="outline"
+                  className="flex items-center"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Previous
+                </Button>
+
+                <div className="flex space-x-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      variant={currentPage === page ? "default" : "outline"}
+                      className={`w-10 h-10 ${currentPage === page ? 'btn-learn' : ''}`}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  variant="outline"
+                  className="flex items-center"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            )}
+
+            {/* Call to Action */}
+            <div className="text-center mt-12">
+              <div className="bg-gradient-primary rounded-2xl p-8 text-white max-w-3xl mx-auto">
+                <h2 className="text-2xl font-comic-neue font-bold mb-4">
+                  🎉 Amazing! You've learned {prepositions.length} prepositions!
+                </h2>
+                <p className="text-lg mb-6 text-white/90">
+                  Now let's practice what you've learned with fun activities and games.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    onClick={() => window.location.href = '/practice?subject=prepositions'}
+                    className="bg-white text-primary hover:bg-white/90 font-bold py-3 px-8 rounded-xl"
+                  >
+                    Start Practice Activities
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.href = '/quiz?subject=prepositions'}
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/10 font-bold py-3 px-8 rounded-xl"
+                  >
+                    Take a Quiz
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Call to Action */}
-        <div className="text-center mt-12">
-          <div className="bg-gradient-primary rounded-2xl p-8 text-white max-w-3xl mx-auto">
-            <h2 className="text-2xl font-comic-neue font-bold mb-4">
-              🎉 Amazing! You've learned {prepositions.length} prepositions!
-            </h2>
-            <p className="text-lg mb-6 text-white/90">
-              Now let's practice what you've learned with fun activities and games.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                onClick={() => window.location.href = '/practice'}
-                className="bg-white text-primary hover:bg-white/90 font-bold py-3 px-8 rounded-xl"
-              >
-                Start Practice Activities
-              </Button>
-              <Button 
-                onClick={() => window.location.href = '/quiz'}
-                variant="outline"
-                className="border-white text-white hover:bg-white/10 font-bold py-3 px-8 rounded-xl"
-              >
-                Take a Quiz
-              </Button>
+        {/* Render Articles Content */}
+        {subject === 'articles' && (
+          <>
+            {/* Header */}
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-comic-neue font-bold text-primary mb-4">
+                Articles: A, An, The
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Master the three most important little words in English! Learn when to use A, AN, and THE with fun examples and practice.
+              </p>
             </div>
-          </div>
-        </div>
+
+            {/* Articles Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
+              {articles.map((article, index) => (
+                <div key={article.word} className="learning-card group">
+                  <div className="text-center">
+                    <div className={`w-20 h-20 mx-auto rounded-full ${article.color} flex items-center justify-center mb-4 group-hover:animate-bounce-gentle shadow-medium`}>
+                      <span className="text-3xl font-bold text-white">{article.word}</span>
+                    </div>
+                    <h3 className="text-2xl font-comic-neue font-bold mb-4">{article.word}</h3>
+                    <p className="text-muted-foreground mb-6 leading-relaxed">
+                      {article.rule}
+                    </p>
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-foreground">Examples:</h4>
+                      {article.examples.map((example, i) => (
+                        <div key={i} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                          <span className="font-medium">{example}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => speakText(example)}
+                            className="hover:bg-primary/10"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Memory Tips */}
+            <div className="bg-gradient-card rounded-2xl p-8 mb-12 max-w-4xl mx-auto">
+              <h2 className="text-2xl font-comic-neue text-center text-primary mb-6">
+                🧠 Memory Tips
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="text-center p-4 bg-primary/10 rounded-xl">
+                  <h3 className="font-bold text-lg mb-2">A vs AN Trick</h3>
+                  <p className="text-muted-foreground">
+                    Say the word out loud! If it sounds like it starts with a vowel (a, e, i, o, u), use AN. Otherwise, use A.
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-secondary/10 rounded-xl">
+                  <h3 className="font-bold text-lg mb-2">THE Rule</h3>
+                  <p className="text-muted-foreground">
+                    Use THE when you're talking about something specific that everyone knows about!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Call to Action */}
+            <div className="text-center">
+              <div className="bg-gradient-secondary rounded-2xl p-8 text-white max-w-3xl mx-auto">
+                <h2 className="text-2xl font-comic-neue font-bold mb-4">
+                  ✨ Great! You've learned about articles!
+                </h2>
+                <p className="text-lg mb-6 text-white/90">
+                  Ready to practice using A, AN, and THE in sentences?
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button 
+                    onClick={() => window.location.href = '/practice?subject=articles'}
+                    className="bg-white text-secondary hover:bg-white/90 font-bold py-3 px-8 rounded-xl"
+                  >
+                    Practice Articles
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.href = '/quiz?subject=articles'}
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/10 font-bold py-3 px-8 rounded-xl"
+                  >
+                    Take Articles Quiz
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
       </div>
     </div>
   );

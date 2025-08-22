@@ -46,7 +46,7 @@ const Index = () => {
       description: 'Learn when to use articles correctly in sentences',
       icon: FileText,
       color: 'bg-gradient-secondary',
-      route: '/articles',
+      route: '/learn?subject=articles',
       available: true
     }
   ];
